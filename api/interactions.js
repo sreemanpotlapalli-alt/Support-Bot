@@ -56,29 +56,45 @@ export default async function handler(req, res) {
 
     const interaction = JSON.parse(rawBody);
 
-    // Discord verification ping
+    // Discord URL verification
     if (interaction.type === 1) {
       return res.status(200).json({ type: 1 });
     }
 
-    // Slash command
+    // Slash command handler
     if (interaction.type === 2) {
       if (interaction.data.name === "ping") {
 
-        const now = Date.now();
+        const start = Date.now();
 
-        // Discord snowflake timestamp extraction
+        // 1️⃣ Immediately respond with "Ping?"
+        res.status(200).json({
+          type: 4,
+          data: { content: "Ping?" }
+        });
+
+        // 2️⃣ Calculate real latency
         const discordTimestamp =
           Number(BigInt(interaction.id) >> 22n) + 1420070400000;
 
-        const latency = now - discordTimestamp;
+        const latency = Date.now() - discordTimestamp;
 
-        return res.status(200).json({
-          type: 4,
-          data: {
-            content: `Ping?\nPong! Took ${latency}ms.`,
-          },
-        });
+        // Small natural delay (optional for smoother UX)
+        await new Promise(r => setTimeout(r, 150));
+
+        // 3️⃣ Edit the original message
+        await fetch(
+          `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: `Pong! Took ${latency}ms.`,
+            }),
+          }
+        );
+
+        return;
       }
     }
 
